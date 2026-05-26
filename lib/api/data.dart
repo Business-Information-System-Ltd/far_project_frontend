@@ -44,11 +44,11 @@ class Department {
 
 
     return Department(
-      // 💡 json key ဖတ်တဲ့ပုံစံကို အမှန်ကန်ဆုံး ပြင်ဆင်ထားပါတယ်
+      
       departmentId: json['department_id'] ?? json['id'], 
       parentDeptId: json['parent_dept'] ?? json['parent_dept_id'],
       deptCode: json['dept_code'],
-      // 💡 API က 'dept_name' လို့ ပို့ရင် ဖတ်မယ်၊ မရှိရင် dynamic သတ်မှတ်မယ်
+      
       deptName: json['dept_name'] ?? json['department_name'] ?? '',
       deptType: json['dept_type'] ?? '',
       allowAssignment: json['allow_assignment'] is int 
