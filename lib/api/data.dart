@@ -1,5 +1,6 @@
-
 import 'dart:convert';
+
+
 
 class Custodian {
   final int? id;
@@ -8,9 +9,9 @@ class Custodian {
   final String type;
   final String email;
   final String phNo;
-  final int deptName;
-  final int branch;
-  final bool can_hold_assets;
+  final int deptId;      
+  final int branchId;    
+  final bool canHoldAssets;
   final bool isActive;
 
   Custodian({
@@ -20,62 +21,68 @@ class Custodian {
     required this.type,
     required this.email,
     required this.phNo,
-    required this.deptName,
-    required this.branch,
-    required this.can_hold_assets,
+    required this.deptId,
+    required this.branchId,
+    required this.canHoldAssets,
     this.isActive = true,
   });
 
   factory Custodian.fromJson(Map<String, dynamic> json) {
+    int _getDeptId(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is Map) {
+        return value['dept_id'] ?? value['department_id'] ?? value['id'] ?? 0;
+      }
+      return int.tryParse(value.toString()) ?? 0;
+    }
+
+    int _getBranchId(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is Map) {
+        return value['branch_id'] ?? value['id'] ?? 0;
+      }
+      return int.tryParse(value.toString()) ?? 0;
+    }
+
     return Custodian(
-      id: json['custodian_id'] as int?,
+      id: json['custodian_id'] as int? ?? json['id'] as int?,
       code: json['custodian_code']?.toString() ?? json['code']?.toString() ?? '',
       name: json['custodian_name']?.toString() ?? json['name']?.toString() ?? '',
       type: json['custodian_type']?.toString() ?? json['type']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
-      phNo: json['phone']?.toString() ?? '-',
-      deptName: json['department'] as int? ?? 0,
-      branch: json['branch'] as int? ?? 0,
-      can_hold_assets: json['can_hold_assets'] == true,
-      isActive: json['is_active'] == true || json['status'] == 'Active',
+      phNo: json['phone']?.toString() ?? json['ph_no']?.toString() ?? '',
+      deptId: _getDeptId(json['dept'] ?? json['department'] ?? json['dept_id']),
+      branchId: _getBranchId(json['branch'] ?? json['branch_id']),
+      canHoldAssets: json['can_hold_assets'] == true || json['can_hold_assets'] == 1,
+      isActive: json['is_active'] == true || json['is_active'] == 1,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      if (id != null) 'custodian_id': id,
       'custodian_code': code,
       'custodian_name': name,
       'custodian_type': type,
       'email': email,
       'phone': phNo,
-      'department': deptName,
-      'branch': branch,
-      'can_hold_assets': can_hold_assets,
-      'is_active': isActive,
-    };
-  }
-  
-  Map<String, dynamic> toJsonWithId() {
-    return {
-      'custodian_id': id,
-      'custodian_code': code,
-      'custodian_name': name,
-      'custodian_type': type,
-      'email': email,
-      'phone': phNo,
-      'department': deptName,
-      'branch': branch,
-      'can_hold_assets': can_hold_assets,
+      'dept': deptId,
+      'branch': branchId,
+      'can_hold_assets': canHoldAssets,
       'is_active': isActive,
     };
   }
 }
+
 
 class Department {
   final int? departmentId;
   final int? parentDeptId;
   final String? deptCode;
   final String deptName;
+  final String? deptShortName;
   final String deptType;
   final bool allowAssignment;
   final bool isActive;
@@ -85,10 +92,11 @@ class Department {
   final String? updatedBy;
 
   Department({
-    required this.departmentId,
+    this.departmentId,
     this.parentDeptId,
     this.deptCode,
     required this.deptName,
+    this.deptShortName,
     required this.deptType,
     required this.allowAssignment,
     required this.isActive,
@@ -104,6 +112,7 @@ class Department {
       parentDeptId: json['parent_dept'] as int?,
       deptCode: json['dept_code']?.toString(),
       deptName: json['dept_name']?.toString() ?? '',
+      deptShortName: json['dept_short_name']?.toString(),
       deptType: json['dept_type']?.toString() ?? '',
       allowAssignment: json['allow_assignment'] == true || json['allow_assignment'] == 1,
       isActive: json['is_active'] == true || json['is_active'] == 1,
@@ -116,27 +125,29 @@ class Department {
 
   Map<String, dynamic> toJson() {
     return {
-      'department_id': departmentId,
-      'parent_dept': parentDeptId,
-      'dept_code': deptCode,
+      if (departmentId != null) 'department_id': departmentId,
+      if (parentDeptId != null) 'parent_dept': parentDeptId,
+      if (deptCode != null) 'dept_code': deptCode,
       'dept_name': deptName,
+      if (deptShortName != null) 'dept_short_name': deptShortName,
       'dept_type': deptType,
       'allow_assignment': allowAssignment,
       'is_active': isActive,
       'created_at': createdAt,
       'updated_at': updatedAt,
-      'created_by': createdBy,
-      'updated_by': updatedBy,
+      if (createdBy != null) 'created_by': createdBy,
+      if (updatedBy != null) 'updated_by': updatedBy,
     };
   }
 }
 
+
 class Branch {
-  final int branchId;        
-  final int countryId;       
+  final int branchId;
+  final int countryId;
   final String? countryName;
   final String? branchCode;
-  final String branchName;   
+  final String branchName;
   final String? region;
   final String? city;
   final String? address;
@@ -169,10 +180,25 @@ class Branch {
   });
 
   factory Branch.fromJson(Map<String, dynamic> json) {
+    // Handle nested country object
+    int getCountryId(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is Map) return value['country_id'] ?? value['id'] ?? 0;
+      return 0;
+    }
+
+    String? getCountryName(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return value;
+      if (value is Map) return value['country_name']?.toString();
+      return null;
+    }
+
     return Branch(
       branchId: json['branch_id'] as int? ?? 0,
-      countryId: json['country_id'] as int? ?? 0,
-      countryName: json['country_name']?.toString(),
+      countryId: getCountryId(json['country'] ?? json['country_id']),
+      countryName: getCountryName(json['country'] ?? json['country_name']),
       branchCode: json['branch_code']?.toString(),
       branchName: json['branch_name']?.toString() ?? '',
       region: json['region']?.toString(),
@@ -188,7 +214,24 @@ class Branch {
       updatedBy: json['updated_by']?.toString(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'branch_id': branchId,
+      'country_id': countryId,
+      if (branchCode != null) 'branch_code': branchCode,
+      'branch_name': branchName,
+      if (region != null) 'region': region,
+      if (city != null) 'city': city,
+      if (address != null) 'address': address,
+      if (phone != null) 'phone': phone,
+      if (email != null) 'email': email,
+      if (postalCode != null) 'postal_code': postalCode,
+      'is_active': isActive,
+    };
+  }
 }
+
 
 class Currency {
   final int? currencyId;
@@ -197,12 +240,15 @@ class Currency {
   final String? currencySymbol;
   final int? decimalPlaces;
   final double? exchangeRate;
-  final bool? isFunctionalCurrency;
-  final bool? isPresentationCurrency;
-  final bool? allowTransactionCurrency;
-  final bool? isActive;
+  final bool isFunctionalCurrency;
+  final bool isPresentationCurrency;
+  final bool allowTransactionCurrency;
+  final bool isActive;
   final String? transactionCurrency;
   final String? functionalCurrency;
+  final double? amountRoundingPrecision;
+  final double? depreciationRounding;
+  final double? depreciationRoundingAlternate;
 
   Currency({
     this.currencyId,
@@ -211,17 +257,20 @@ class Currency {
     this.currencySymbol,
     this.decimalPlaces,
     this.exchangeRate,
-    this.isFunctionalCurrency,
-    this.isPresentationCurrency,
-    this.allowTransactionCurrency,
-    this.isActive,
+    this.isFunctionalCurrency = false,
+    this.isPresentationCurrency = false,
+    this.allowTransactionCurrency = false,
+    this.isActive = true,
     this.transactionCurrency,
     this.functionalCurrency,
+    this.amountRoundingPrecision,
+    this.depreciationRounding,
+    this.depreciationRoundingAlternate,
   });
 
   factory Currency.fromJson(Map<String, dynamic> json) {
     return Currency(
-      currencyId: json['id'] as int?,
+      currencyId: json['currency_id'] as int? ?? json['id'] as int?,
       currencyCode: json['currency_code']?.toString(),
       currencyName: json['currency_name']?.toString(),
       currencySymbol: json['currency_symbol']?.toString(),
@@ -229,23 +278,46 @@ class Currency {
       exchangeRate: json['exchange_rate'] != null 
           ? double.tryParse(json['exchange_rate'].toString()) 
           : null,
-      isFunctionalCurrency: json['is_functional_currency'] as bool?,
-      isPresentationCurrency: json['is_presentation_currency'] as bool?,
-      allowTransactionCurrency: json['allow_transaction_currency'] as bool?,
-      isActive: json['is_active'] as bool?,
-      transactionCurrency: json['transaction_currency'] ?? json['transactionCurrency'] ?? '-',
-      functionalCurrency: json['functional_currency'] ?? json['functionalCurrency'] ?? '-',
+      isFunctionalCurrency: json['is_functional_currency'] == true,
+      isPresentationCurrency: json['is_presentation_currency'] == true,
+      allowTransactionCurrency: json['allow_transaction_currency'] == true,
+      isActive: json['is_active'] == true,
+      transactionCurrency: json['transaction_currency']?.toString(),
+      functionalCurrency: json['functional_currency']?.toString(),
+      amountRoundingPrecision: json['amount_rounding_precision'] != null 
+          ? double.tryParse(json['amount_rounding_precision'].toString()) 
+          : null,
+      depreciationRounding: json['depreciation_rounding'] != null 
+          ? double.tryParse(json['depreciation_rounding'].toString()) 
+          : null,
+      depreciationRoundingAlternate: json['depreciation_rounding_alternate'] != null           ? double.tryParse(json['depreciation_rounding_alternate'].toString()) 
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': currencyId,
-      'currency_code': currencyCode,
-      'currency_name': currencyName,
-      'currency_symbol': currencySymbol,
-      'exchange_rate': exchangeRate,
+      if (currencyId != null) 'currency_id': currencyId,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (currencyName != null) 'currency_name': currencyName,
+      if (currencySymbol != null) 'currency_symbol': currencySymbol,
+      if (decimalPlaces != null) 'decimal_places': decimalPlaces,
+      if (exchangeRate != null) 'exchange_rate': exchangeRate,
+      'is_functional_currency': isFunctionalCurrency,
+      'is_presentation_currency': isPresentationCurrency,
+      'allow_transaction_currency': allowTransactionCurrency,
       'is_active': isActive,
+      if (transactionCurrency != null) 'transaction_currency': transactionCurrency,
+      if (functionalCurrency != null) 'functional_currency': functionalCurrency,
+      if (amountRoundingPrecision != null) 'amount_rounding_precision': amountRoundingPrecision,
+      if (depreciationRounding != null) 'depreciation_rounding': depreciationRounding,
+      if (depreciationRoundingAlternate != null) 'depreciation_rounding_alternate': depreciationRoundingAlternate,
     };
   }
+}
+class PaginatedData<T> {
+  final List<T> items;
+  final int totalCount;
+
+  PaginatedData({required this.items, required this.totalCount});
 }

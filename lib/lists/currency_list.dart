@@ -1,3 +1,4 @@
+import 'package:far_project_frontend/details/currency_details.dart';
 import 'package:flutter/material.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 import '../api/api_service.dart';
@@ -60,7 +61,7 @@ class _CurrencyListScreenState extends State<CurrencyListScreen> {
           'action': PlutoCell(value: 'Detail'),
         },
         sortIdx: index,
-      );
+      );           
     }).toList();
   }
 
@@ -200,14 +201,14 @@ class _CurrencyListScreenState extends State<CurrencyListScreen> {
                                   return TextButton.icon(
                                     //icon: const Icon(Icons.edit, size: 16),
                                     label: const Text("Detail"),
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => CurrencyListScreen(
-                                            //currency: selectedCurrency, // Pass the selected currency
+                                onPressed: () {
+                                     Navigator.push(
+                                  context,
+                               MaterialPageRoute(
+                          builder: (context) => CurrencyDetailScreen(currency: selectedCurrency),
+                                    
                                           ),
-                                        ),
+                                        
                                       ).then((_) => loadCurrencies());
                                     },
                                   );

@@ -1,3 +1,4 @@
+import 'package:far_project_frontend/details/currency_details.dart';
 import 'package:far_project_frontend/forms/custodian_form.dart';
 import 'package:far_project_frontend/lists/currency_list.dart';
 import 'package:far_project_frontend/lists/custodian_list.dart';
@@ -49,11 +50,11 @@ class _CustodianFormState extends State<CustodianForm> {
   bool _canHoldAssets = true;
   bool _isActive = true;
 
-  // Selected ID Variables (String အစား ID သိမ်းရန်)
+
   int? _selectedBranchId;
   int? _selectedDepartmentId;
 
-  // Dummy Data: API မှ ခေါ်ယူရရှိမည့် ပုံစံမျိုး (သင့်ထံတွင် Branch/Dept List ရှိပြီးသားဖြစ်ရမည်)
+  
   final List<Map<String, dynamic>> _branchList = [
     {"id": 1, "name": "Asus"},
     {"id": 2, "name": "Acer"},
@@ -75,15 +76,15 @@ class _CustodianFormState extends State<CustodianForm> {
       return;
     }
 
-    final String apiUrl = "http://localhost:26086/api/far/v1/custodians/"; // သင့် API URL
+    final String apiUrl = "http://localhost:26086/api/far/v1/custodians/"; 
 
-    // Backend မှ မျှော်လင့်ထားသည့် Key အမျိုးအစားအတိုင်း ပို့ပေးခြင်း
+    
     final Map<String, dynamic> payload = {
       "name": _nameController.text.trim(),
       "phone_number": _phoneController.text.trim(),
       "email": _emailController.text.trim(),
-      "branch": _selectedBranchId,       // စာသားမဟုတ်ဘဲ ID integer ကို ပို့သည်
-      "department": _selectedDepartmentId, // စာသားမဟုတ်ဘဲ ID integer ကို ပို့သည်
+      "branch": _selectedBranchId,       
+      "department": _selectedDepartmentId, 
       "can_hold_assets": _canHoldAssets,
       "is_active": _isActive,
     };
@@ -101,7 +102,7 @@ class _CustodianFormState extends State<CustodianForm> {
         );
         _clearForm();
       } else {
-        // Error 400 တက်ပါက ဘာကြောင့်လဲဆိုတာ Flutter Debug Console တွင် ပြပေးမည်
+        
         print("Backend Validation Error Response: ${response.body}");
         
         ScaffoldMessenger.of(context).showSnackBar(
@@ -143,13 +144,13 @@ class _CustodianFormState extends State<CustodianForm> {
               ),
               const SizedBox(height: 15),
 
-              // Branch Dropdown (Value ကို ID အဖြစ် သုံးထားသည်)
+              
               DropdownButtonFormField<int>(
                 value: _selectedBranchId,
                 hint: const Text("Select Branch *"),
                 items: _branchList.map((branch) {
                   return DropdownMenuItem<int>(
-                    value: branch['id'] as int, // ID ကို value အဖြစ်ထားသည်
+                    value: branch['id'] as int, 
                     child: Text(branch['name']),
                   );
                 }).toList(),
@@ -161,13 +162,13 @@ class _CustodianFormState extends State<CustodianForm> {
               ),
               const SizedBox(height: 15),
 
-              // Department Dropdown (Value ကို ID အဖြစ် သုံးထားသည်)
+              
               DropdownButtonFormField<int>(
                 value: _selectedDepartmentId,
                 hint: const Text("Select Department *"),
                 items: _departmentList.map((dept) {
                   return DropdownMenuItem<int>(
-                    value: dept['id'] as int, // ID ကို value အဖြစ်ထားသည်
+                    value: dept['id'] as int, 
                     child: Text(dept['name']),
                   );
                 }).toList(),

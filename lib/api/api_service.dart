@@ -4,38 +4,50 @@ import 'package:http/http.dart' as http;
 import 'data.dart';
 
 class ApiService {
-  static const String baseUrl = "http://127.0.0.1:8000/api/far/v1/";
+  static const String baseUrl = "http://127.0.0.1:8000/api/v1/far/";
   final String custodianEndpoint = 'custodians/';
   static final String departmentEndpoint = 'departments/';
   static final String branchEndpoint = 'branches/';
   static final String currencyEndpoint = 'currencies/';
 
-  // Fixed fetchAllDropdowns()
   Future<Map<String, List<Map<String, dynamic>>>> fetchAllDropdowns() async {
-    final results = await Future.wait([
-      http.get(Uri.parse('$baseUrl$branchEndpoint')).timeout(const Duration(seconds: 5)),
-      http.get(Uri.parse('$baseUrl$departmentEndpoint')).timeout(const Duration(seconds: 5)),
-      http.get(Uri.parse('$baseUrl$custodianEndpoint')).timeout(const Duration(seconds: 5)),
-    ]);
+    try {
+      final results = await Future.wait([
+        http.get(Uri.parse('$baseUrl$branchEndpoint')).timeout(const Duration(seconds: 5)),
+        http.get(Uri.parse('$baseUrl$departmentEndpoint')).timeout(const Duration(seconds: 5)),
+        http.get(Uri.parse('$baseUrl${custodianEndpoint}types/')).timeout(const Duration(seconds: 5)),
+      ]);
 
-    return {
-      'branches': results[0].statusCode == 200 
-          ? List<Map<String, dynamic>>.from(json.decode(results[0].body)) 
-          : [],
-      'depts': results[1].statusCode == 200 
-          ? List<Map<String, dynamic>>.from(json.decode(results[1].body)) 
-          : [],
-      'types': results[2].statusCode == 200 
-          ? List<Map<String, dynamic>>.from(json.decode(results[2].body)) 
-          : [],
-    };
+      List<Map<String, dynamic>> departments = [];
+      if (results[1].statusCode == 200) {
+        final deptData = json.decode(results[1].body);
+        if (deptData is Map && deptData.containsKey('results')) {
+          departments = List<Map<String, dynamic>>.from(deptData['results']);
+        } else if (deptData is List) {
+          departments = List<Map<String, dynamic>>.from(deptData);
+        }
+      }
+
+      return {
+        'branches': results[0].statusCode == 200 
+            ? List<Map<String, dynamic>>.from(json.decode(results[0].body)) 
+            : [],
+        'depts': departments,
+        'types': results[2].statusCode == 200 
+            ? List<Map<String, dynamic>>.from(json.decode(results[2].body)) 
+            : [],
+      };
+    } catch (e) {
+      print('Error fetching dropdowns: $e');
+      return {'branches': [], 'depts': [], 'types': []};
+    }
   }
 
-  // Fixed createCustodian()
   Future<Custodian> createCustodian(Custodian custodian) async {
     try {
       final payload = custodian.toJson();
-      print('Sending payload: ${json.encode(payload)}');
+      print('=== CREATE CUSTODIAN ===');
+      print('Payload: ${json.encode(payload)}');
       
       final response = await http.post(
         Uri.parse('$baseUrl$custodianEndpoint'),
@@ -59,20 +71,96 @@ class ApiService {
     }
   }
 
+  Future<bool> updateCustodian(int id, Map<String, dynamic> data) async {
+    try {
+      print('=== UPDATE CUSTODIAN ===');
+      print('ID: $id');
+      print('Payload: ${jsonEncode(data)}');
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl$custodianEndpoint$id/'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(data),
+      );
+      
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      print('Error updating custodian: $e');
+      return false;
+    }
+  }
+
   Future<List<Custodian>> fetchCustodians() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl$custodianEndpoint'));
-      print("Backend send raw data: ${response.body}");
-
+      
       if (response.statusCode == 200) {
-        List<dynamic> body = jsonDecode(response.body);
-        return body.map((dynamic item) => Custodian.fromJson(item)).toList();
+        final data = jsonDecode(response.body);
+        if (data is Map && data.containsKey('results')) {
+          return (data['results'] as List)
+              .map((item) => Custodian.fromJson(item))
+              .toList();
+        } else if (data is List) {
+          return data.map((item) => Custodian.fromJson(item)).toList();
+        }
+        return [];
       } else {
-        print("Custodian Server Error: ${response.statusCode}");
         return [];
       }
     } catch (e) {
       print("Error fetching custodians: $e");
+      return [];
+    }
+  }
+
+  Future<List<Branch>> fetchBranches() async {
+    try {
+      final response = await http.get(Uri.parse(baseUrl + branchEndpoint));
+    
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is Map && data.containsKey('results')) {
+          return (data['results'] as List)
+              .map((json) => Branch.fromJson(json))
+              .toList();
+        } else if (data is List) {
+          return data.map((json) => Branch.fromJson(json)).toList();
+        }
+        return [];
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching branches: $e');
+      return [];
+    }
+  }
+
+  Future<List<Department>> fetchDepartments() async {
+    try {
+      final response = await http.get(Uri.parse(baseUrl + departmentEndpoint));
+    
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        List<dynamic> data;
+        
+        if (jsonData is Map && jsonData.containsKey('results')) {
+          data = jsonData['results'];
+        } else if (jsonData is List) {
+          data = jsonData;
+        } else {
+          return [];
+        }
+        
+        return data.map((json) => Department.fromJson(json)).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching departments: $e');
       return [];
     }
   }
@@ -82,10 +170,16 @@ class ApiService {
       final response = await http.get(Uri.parse('$baseUrl$currencyEndpoint'));
 
       if (response.statusCode == 200) {
-        List<dynamic> body = jsonDecode(response.body);
-        return body.map((dynamic item) => Currency.fromJson(item)).toList();
+        final data = jsonDecode(response.body);
+        if (data is Map && data.containsKey('results')) {
+          return (data['results'] as List)
+              .map((item) => Currency.fromJson(item))
+              .toList();
+        } else if (data is List) {
+          return data.map((item) => Currency.fromJson(item)).toList();
+        }
+        return [];
       } else {
-        print("Currency Server Error: ${response.statusCode}");
         return [];
       }
     } catch (e) {
@@ -93,54 +187,77 @@ class ApiService {
       return [];
     }
   }
-  
-  Future<bool> updateCustodian(int id, Map<String, dynamic> data) async {
+
+  Future<bool> updateCurrency(int id, Map<String, dynamic> data) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl$custodianEndpoint$id/'),
+        Uri.parse('$baseUrl$currencyEndpoint$id/'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(data),
       );
       return response.statusCode == 200 || response.statusCode == 204;
     } catch (e) {
-      print('Error updating custodian: $e');
+      print('Error updating currency: $e');
       return false;
     }
   }
 
-  Future<List<Department>> fetchDepartments() async {
+  Future<PaginatedData<Custodian>> getCustodiansPaginated({
+    required int page,
+    required int limit,
+    String? search,
+    String? type,
+    bool? isActive,
+  }) async {
     try {
-      final response = await http.get(Uri.parse(baseUrl + departmentEndpoint));
-      print('Department response status: ${response.statusCode}');
-      print('Department response body: ${response.body}');
-    
-      if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Department.fromJson(json)).toList();
-      } else {
-        throw Exception('Failed to load departments: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error fetching departments: $e');
-      rethrow;
-    }
-  }
+      final params = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+      if (search != null && search.isNotEmpty) params['search'] = search;
+      if (type != null && type.isNotEmpty) params['custodian_type'] = type;
+      if (isActive != null) params['is_active'] = isActive.toString();
+      
+      final uri = Uri.parse('$baseUrl$custodianEndpoint').replace(queryParameters: params);
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
-  Future<List<Branch>> fetchBranches() async {
-    try {
-      final response = await http.get(Uri.parse(baseUrl + branchEndpoint));
-      print('Branch response status: ${response.statusCode}');
-      print('Branch response body: ${response.body}');
-    
+      print('Custodians Paginated response: ${response.statusCode}');
+      print('Custodians Paginated body: ${response.body}');
+
       if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Branch.fromJson(json)).toList();
+        final json = jsonDecode(response.body);
+        
+        List<dynamic> itemsJson;
+        int totalCount;
+        
+        if (json.containsKey('results')) {
+          itemsJson = json['results'];
+          totalCount = json['count'] ?? 0;
+        } else if (json.containsKey('items')) {
+          itemsJson = json['items'];
+          totalCount = json['total'] ?? 0;
+        } else if (json is List) {
+          itemsJson = json;
+          totalCount = json.length;
+        } else {
+          itemsJson = [];
+          totalCount = 0;
+        }
+        
+        final List<Custodian> custodians = itemsJson
+            .map((j) => Custodian.fromJson(j))
+            .toList();
+            
+        return PaginatedData<Custodian>(
+          items: custodians, 
+          totalCount: totalCount,
+        );
       } else {
-        throw Exception('Failed to load branches: ${response.statusCode}');
+        throw Exception('Failed to load custodians: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error fetching branches: $e');
-      rethrow;
+      print('Error fetching paginated custodians: $e');
+      return PaginatedData<Custodian>(items: [], totalCount: 0);
     }
   }
 }

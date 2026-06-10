@@ -1,3 +1,4 @@
+
 import 'package:far_project_frontend/api/api_service.dart';
 import 'package:far_project_frontend/api/data.dart';
 import 'package:flutter/material.dart';
@@ -37,76 +38,44 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
   void initState() {
     super.initState();
     _isEditMode = widget.custodian != null;
-    print('=== INIT STATE ===');
-    print('Is Edit Mode: $_isEditMode');
     
-    if (_isEditMode) {
-      print('Custodian data: ${widget.custodian?.toJson()}');
-      _fillOldData();
-    }
     _loadData();
   }
 
   void _fillOldData() {
     final c = widget.custodian!;
+    
     _codeController.text = c.code;
     _nameController.text = c.name;
     _phoneController.text = c.phNo;
     _emailController.text = c.email;
     
-    print('=== FILL OLD DATA ===');
-    print('Type from API: ${c.type}');
-    print('Branch ID from API: ${c.branch}');
-    print('Dept ID from API: ${c.deptName}');
-    
-    _selectedType = c.type;
-    _selectedBranchId = c.branch;
-    _selectedDeptId = c.deptName;
-    _canHoldAssets = c.can_hold_assets;
-    _isActive = c.isActive;
-    
-    print('Selected Type after assign: $_selectedType');
-    print('Selected Branch after assign: $_selectedBranchId');
-    print('Selected Dept after assign: $_selectedDeptId');
+    setState(() {
+      _selectedType = c.type;
+      _selectedBranchId = c.branchId;
+      _selectedDeptId = c.deptId == 0 ? null : c.deptId;
+      _canHoldAssets = c.canHoldAssets;
+      _isActive = c.isActive;
+    });
   }
 
   Future<void> _loadData() async {
     setState(() => _isLoadingData = true);
     try {
-      print('=== LOADING DATA ===');
-      final branch = await _apiService.fetchBranches();
-      final department = await _apiService.fetchDepartments();
-      
-      print('Branches loaded: ${branch.length}');
-      branch.forEach((b) {
-        print('Branch: ID=${b.branchId}, Name=${b.branchName}');
-      });
-      
-      print('Departments loaded: ${department.length}');
-      department.forEach((d) {
-        print('Department: ID=${d.departmentId}, Name=${d.deptName}');
-      });
+      final branches = await _apiService.fetchBranches();
+      final departments = await _apiService.fetchDepartments();
       
       setState(() {
-        _branchList = branch;
-        _deptList = department;
+        _branchList = branches;
+        _deptList = departments;
         _isLoadingData = false;
       });
       
-      print('=== AFTER SETSTATE ===');
-      print('Selected Branch ID: $_selectedBranchId');
-      print('Selected Dept ID: $_selectedDeptId');
-      print('Selected Type: $_selectedType');
-      
-      // Check if selected IDs exist in lists
-      bool branchExists = _branchList.any((b) => b.branchId == _selectedBranchId);
-      bool deptExists = _deptList.any((d) => d.departmentId == _selectedDeptId);
-      
-      print('Branch exists in list: $branchExists');
-      print('Department exists in list: $deptExists');
+      if (_isEditMode) {
+        _fillOldData();
+      }
       
     } catch (e) {
-      print('Error loading data: $e');
       setState(() => _isLoadingData = false);
       _showSnackbar('Failed to load data: $e', Colors.red);
     }
@@ -134,14 +103,14 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
           'custodian_code': _codeController.text.trim(),
           'custodian_name': _nameController.text.trim(),
           'custodian_type': _selectedType,
-          'email': _emailController.text.trim(),
           'phone': _phoneController.text.trim(),
-          'department': _selectedDeptId,
+          'email': _emailController.text.trim(),
+          'dept': _selectedDeptId,
           'branch': _selectedBranchId,
           'can_hold_assets': _canHoldAssets,
           'is_active': _isActive,
         };
-        print('Update payload: $payload');
+        
         final success = await _apiService.updateCustodian(widget.custodian!.id!, payload);
         if (success) {
           _showSnackbar('Custodian updated successfully', Colors.green);
@@ -155,20 +124,19 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
           code: _codeController.text.trim(),
           name: _nameController.text.trim(),
           type: _selectedType!,
-          branch: _selectedBranchId!,
-          deptName: _selectedDeptId!,
+          branchId: _selectedBranchId!,
+          deptId: _selectedDeptId!,
           phNo: _phoneController.text.trim(),
           email: _emailController.text.trim(),
-          can_hold_assets: _canHoldAssets,
+          canHoldAssets: _canHoldAssets,
           isActive: _isActive,
         );
-        print('Create payload: ${newCustodian.toJson()}');
+        
         await _apiService.createCustodian(newCustodian);
         _showSnackbar('Custodian created successfully!', Colors.green);
         Navigator.pop(context, true);
       }
     } catch (e) {
-      print('Error: $e');
       _showSnackbar('Error: $e', Colors.red);
     } finally {
       if (mounted) {
@@ -178,7 +146,6 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
   }
 
   void _clearFormFields() {
-    _formKey.currentState?.reset();
     _codeController.clear();
     _nameController.clear();
     _phoneController.clear();
@@ -269,10 +236,7 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
                                   );
                                 }).toList(),
                                 isRequired: true,
-                                onChanged: (val) {
-                                  print('Type changed to: $val');
-                                  setState(() => _selectedType = val);
-                                },
+                                onChanged: (val) => setState(() => _selectedType = val),
                               ),
                             ),
                           ],
@@ -304,10 +268,7 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
                                   );
                                 }).toList(),
                                 isRequired: true,
-                                onChanged: (val) {
-                                  print('Branch changed to: $val');
-                                  setState(() => _selectedBranchId = val);
-                                },
+                                onChanged: (val) => setState(() => _selectedBranchId = val),
                               ),
                             ),
                             const SizedBox(width: 32),
@@ -323,10 +284,7 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
                                   );
                                 }).toList(),
                                 isRequired: true,
-                                onChanged: (val) {
-                                  print('Department changed to: $val');
-                                  setState(() => _selectedDeptId = val);
-                                },
+                                onChanged: (val) => setState(() => _selectedDeptId = val),
                               ),
                             ),
                           ],
@@ -363,23 +321,20 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
                           children: [
                             Expanded(
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
                                   Checkbox(
                                     value: _canHoldAssets,
                                     activeColor: const Color(0xFF1E56A0),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     onChanged: (val) => setState(() => _canHoldAssets = val!),
                                   ),
-                                  const Text('Can Hold Assets', style: TextStyle(fontSize: 14, color: Colors.black87)),
+                                  const Text('Can Hold Assets'),
                                 ],
                               ),
                             ),
                             Expanded(
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
-                                  const Text('Status', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                  const Text('Status'),
                                   const SizedBox(width: 16),
                                   Switch(
                                     value: _isActive,
@@ -388,7 +343,7 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
                                     onChanged: (val) => setState(() => _isActive = val),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(_isActive ? 'Active' : 'Inactive', style: const TextStyle(fontSize: 14, color: Colors.black87)),
+                                  Text(_isActive ? 'Active' : 'Inactive'),
                                 ],
                               ),
                             ),
@@ -404,33 +359,26 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
                             SizedBox(
                               width: 120,
                               height: 40,
-                              child: ElevatedButton.icon(
+                              child: ElevatedButton(
                                 onPressed: _isSaving ? null : _saveData,
-                                //icon: _isSaving
-                                    //? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                    //: const Icon(Icons.save_outlined, size: 18),
-                                label: Text(_isSaving ? 'Saving...' : 'Save'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF1E56A0),
                                   foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                                 ),
+                                child: Text(_isSaving ? 'Saving...' : 'Save'),
                               ),
                             ),
                             const SizedBox(width: 16),
                             SizedBox(
                               width: 120,
                               height: 40,
-                              child: OutlinedButton.icon(
+                              child: OutlinedButton(
                                 onPressed: _isSaving ? null : _clearFormFields,
-                                //icon: const Icon(Icons.cancel_outlined, size: 18),
-                                label: const Text('Clear'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF1E56A0),
                                   side: const BorderSide(color: Color(0xFF1E56A0)),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                                 ),
+                                child: const Text('Clear'),
                               ),
                             ),
                           ],
@@ -456,8 +404,8 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
       children: [
         Row(
           children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14, color: Colors.black87)),
-            if (isRequired) const Text(' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+            if (isRequired) const Text(' *', style: TextStyle(color: Colors.red)),
           ],
         ),
         const SizedBox(height: 8),
@@ -467,11 +415,8 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
           validator: (value) => (isRequired && (value == null || value.isEmpty)) ? 'This field is required' : null,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF1E56A0), width: 1.5)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
           ),
         ),
       ],
@@ -486,29 +431,28 @@ class _CustodianFormScreenState extends State<CustodianFormScreen> {
     required bool isRequired,
     required void Function(T?)? onChanged,
   }) {
+    final bool hasValue = value != null && items.any((item) => item.value == value);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14, color: Colors.black87)),
-            if (isRequired) const Text(' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+            if (isRequired) const Text(' *', style: TextStyle(color: Colors.red)),
           ],
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
-          value: items.any((item) => item.value == value) ? value : null,
-          hint: Text(hint, style: TextStyle(color: Colors.grey.shade400, fontSize: 14)),
+          value: hasValue ? value : null,
+          hint: Text(hint),
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
           validator: (val) => (isRequired && val == null) ? 'Please select an option' : null,
           onChanged: onChanged,
           items: items,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF1E56A0), width: 1.5)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
           ),
         ),
       ],

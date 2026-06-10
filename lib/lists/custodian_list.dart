@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 import '../api/api_service.dart';
 import '../api/data.dart';
-import '../forms/custodian_form.dart'; 
 
 class CustodianListScreen extends StatefulWidget {
   const CustodianListScreen({Key? key}) : super(key: key);
@@ -15,6 +14,8 @@ class CustodianListScreen extends StatefulWidget {
 class _CustodianListScreenState extends State<CustodianListScreen> {
   final ApiService apiService = ApiService();
   List<Custodian> custodianList = [];
+  List<Branch> branchList = [];
+  List<Department> deptList = [];
   List<PlutoRow> rows = [];
   bool isLoading = true;
   late PlutoGridStateManager stateManager;
@@ -22,24 +23,69 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
   @override
   void initState() {
     super.initState();
-    loadCustodians();
+    loadAllData();
   }
 
-  void loadCustodians() async {
+  
+  Future<void> loadAllData() async {
     setState(() => isLoading = true);
-    var data = await apiService.fetchCustodians();
+    
+    print('=== LOADING CUSTODIAN DATA ===');
+    
+    // Load custodians
+    List<Custodian> custodians = [];
+    try {
+      custodians = await apiService.fetchCustodians();
+      print('Custodians loaded: ${custodians.length}');
+    } catch (e) {
+      print('Error loading custodians: $e');
+    }
+    
+    // Load branches
+    List<Branch> branches = [];
+    try {
+      branches = await apiService.fetchBranches();
+      print('Branches loaded: ${branches.length}');
+    } catch (e) {
+      print('Error loading branches: $e');
+    }
+    
+    // Load departments
+    List<Department> departments = [];
+    try {
+      departments = await apiService.fetchDepartments();
+      print('Departments loaded: ${departments.length}');
+    } catch (e) {
+      print('Error loading departments: $e');
+    }
     
     setState(() {
-      custodianList = data;
+      custodianList = custodians;
+      branchList = branches;
+      deptList = departments;
       buildPlutoRows();
       isLoading = false;
     });
   }
 
   void buildPlutoRows() {
+   
+    final Map<int, String> branchNameMap = {
+      for (var branch in branchList) branch.branchId: branch.branchName
+    };
+    
+    final Map<int, String> deptNameMap = {
+      for (var dept in deptList) dept.departmentId!: dept.deptName
+    };
+
     rows = custodianList.asMap().entries.map((entry) {
       int index = entry.key;
       Custodian custodian = entry.value;
+      
+      // Get names from maps
+      String branchName = branchNameMap[custodian.branchId] ?? 'ID: ${custodian.branchId}';
+      String deptName = deptNameMap[custodian.deptId] ?? 'ID: ${custodian.deptId}';
+      
       return PlutoRow(
         cells: {
           'id': PlutoCell(value: custodian.id ?? 0),
@@ -48,9 +94,9 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
           'type': PlutoCell(value: custodian.type),
           'email': PlutoCell(value: custodian.email),
           'phNo': PlutoCell(value: custodian.phNo),
-          'deptName': PlutoCell(value: custodian.deptName?.toString() ?? '-'),
-          'branch': PlutoCell(value: custodian.branch?.toString() ?? '-'),
-          'status': PlutoCell(value: custodian.isActive ? 'Active' : 'Inactive'),
+          'deptName': PlutoCell(value: deptName),
+          'branch': PlutoCell(value: branchName),
+          'status': PlutoCell(value: custodian.isActive),
           'action': PlutoCell(value: 'Edit'),
         },
         sortIdx: index,
@@ -58,15 +104,71 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
     }).toList();
   }
 
+  Future<void> _toggleStatus(Custodian custodian, bool newStatus) async {
+    try {
+      print('Toggling status for ${custodian.name} to $newStatus');
+      
+      final payload = {
+        
+      'custodian_name': custodian.name,
+      'custodian_type': custodian.type,
+      'email': custodian.email,
+      'phone': custodian.phNo,
+      'dept': custodian.deptId,     
+      'branch': custodian.branchId,  
+      'can_hold_assets': custodian.canHoldAssets,
+      'is_active': newStatus,
+      };
+      
+      final success = await apiService.updateCustodian(custodian.id!, payload);
+      
+      if (success) {
+       
+        final index = custodianList.indexWhere((c) => c.id == custodian.id);
+        if (index != -1) {
+          setState(() {
+            custodianList[index] = Custodian(
+              id: custodian.id,
+              code: custodian.code,
+              name: custodian.name,
+              type: custodian.type,
+              email: custodian.email,
+              phNo: custodian.phNo,
+              branchId: custodian.branchId,
+              deptId: custodian.deptId,
+              canHoldAssets: custodian.canHoldAssets,
+              isActive: newStatus,
+            );
+            buildPlutoRows();
+          });
+        }
+        _showSnackbar('Status updated successfully', Colors.green);
+      } else {
+        _showSnackbar('Failed to update status', Colors.red);
+      }
+    } catch (e) {
+      print('Error toggling status: $e');
+      _showSnackbar('Error: $e', Colors.red);
+    }
+  }
+
+  void _showSnackbar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Custodian List"),
+        backgroundColor: const Color(0xFF1E56A0),
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: loadCustodians,
+            onPressed: loadAllData,
           ),
         ],
       ),
@@ -77,7 +179,6 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Action Bar Header
                   Row(
                     children: [
                       ElevatedButton.icon(
@@ -90,7 +191,7 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[800],
+                          backgroundColor: const Color(0xFF1E56A0),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(6),
@@ -102,16 +203,36 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
                             MaterialPageRoute(
                               builder: (context) => const CustodianFormScreen(),
                             ),
-                          ).then((_) => loadCustodians());
+                          ).then((_) => loadAllData());
                         },
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        'Total: ${custodianList.length}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black54,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // PlutoGrid Layout Setup
                   Expanded(
                     child: rows.isEmpty
-                        ? const Center(child: Text("No custodians available."))
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.people_outline, size: 64, color: Colors.grey),
+                                SizedBox(height: 16),
+                                Text(
+                                  "No custodians available.",
+                                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          )
                         : PlutoGrid(
                             columns: [
                               PlutoColumn(
@@ -146,13 +267,13 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
                                 width: 180,
                               ),
                               PlutoColumn(
-                                title: 'Ph no',
+                                title: 'Phone No',
                                 field: 'phNo',
                                 type: PlutoColumnType.text(),
                                 width: 140,
                               ),
                               PlutoColumn(
-                                title: 'Dept Name',
+                                title: 'Department',
                                 field: 'deptName',
                                 type: PlutoColumnType.text(),
                                 width: 140,
@@ -169,21 +290,21 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
                                 type: PlutoColumnType.text(),
                                 width: 110,
                                 renderer: (rendererContext) {
-                                  bool isActive = rendererContext.cell.value == 'Active';
+                                  final rowIndex = rendererContext.rowIdx;
+                                  if (rowIndex >= custodianList.length) {
+                                    return const SizedBox();
+                                  }
+                                  final custodian = custodianList[rowIndex];
                                   return Center(
-                                    child: Transform.scale(
-                                      scale: 0.75,
-                                      child: Switch(
-                                        value: isActive,
-                                        onChanged: (bool value) async {
-                                          // Implement status toggle if needed
-                                          print('Status toggled: $value');
-                                        },
-                                        activeColor: Colors.white,
-                                        activeTrackColor: Colors.blue[600],
-                                        inactiveThumbColor: Colors.grey[400],
-                                        inactiveTrackColor: Colors.grey[200],
-                                      ),
+                                    child: Switch(
+                                      value: custodian.isActive,
+                                      onChanged: (bool value) async {
+                                        await _toggleStatus(custodian, value);
+                                      },
+                                      activeColor: Colors.white,
+                                      activeTrackColor: const Color(0xFF1E56A0),
+                                      inactiveThumbColor: Colors.grey[400],
+                                      inactiveTrackColor: Colors.grey[200],
                                     ),
                                   );
                                 },
@@ -195,20 +316,23 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
                                 width: 120,
                                 enableEditingMode: false,
                                 renderer: (rendererContext) {
-                                  int rowIndex = rendererContext.rowIdx;
-                                  Custodian selectedCustodian = custodianList[rowIndex];
+                                  final rowIndex = rendererContext.rowIdx;
+                                  if (rowIndex >= custodianList.length) {
+                                    return const SizedBox();
+                                  }
+                                  final selectedCustodian = custodianList[rowIndex];
                                   return TextButton.icon(
-                                    icon: const Icon(Icons.edit, size: 16),
-                                    label: const Text("Edit"),
+                                    icon: const Icon(Icons.edit, size: 16, color: Color(0xFF1E56A0)),
+                                    label: const Text("Edit", style: TextStyle(color: Color(0xFF1E56A0))),
                                     onPressed: () {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => CustodianFormScreen(
-                                            custodian: selectedCustodian, // Fixed: was commented out
+                                            custodian: selectedCustodian,
                                           ),
                                         ),
-                                      ).then((_) => loadCustodians());
+                                      ).then((_) => loadAllData());
                                     },
                                   );
                                 },
@@ -219,7 +343,11 @@ class _CustodianListScreenState extends State<CustodianListScreen> {
                               stateManager = event.stateManager;
                             },
                             configuration: const PlutoGridConfiguration(
-                              style: PlutoGridStyleConfig(),
+                              style: PlutoGridStyleConfig(
+                                activatedColor: Color(0xFF1E56A0),
+                                gridBorderColor: Colors.grey,
+                                cellTextStyle: TextStyle(fontSize: 13),
+                              ),
                             ),
                           ),
                   ),
