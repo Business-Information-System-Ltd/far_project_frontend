@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:far_project_frontend/details/currency_details.dart';
 import 'package:far_project_frontend/forms/custodian_form.dart';
 import 'package:far_project_frontend/lists/currency_list.dart';
@@ -239,3 +240,6 @@ class _CustodianFormState extends State<CustodianForm> {
     );
   }
 }
+=======
+
+>>>>>>> fed176e2075b054b8a881403cd695ec9e517cdc5
