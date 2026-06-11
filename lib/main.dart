@@ -1,3 +1,7 @@
+import 'package:far_project_frontend/api/data.dart';
+import 'package:far_project_frontend/forms/location_form.dart';
+import 'package:far_project_frontend/lists/country_list.dart';
+import 'package:far_project_frontend/lists/location_list.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -11,6 +15,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      
+  debugShowCheckedModeBanner: false, 
+  
+
       title: 'Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
@@ -30,7 +38,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: LocationList(),
     );
   }
 }
