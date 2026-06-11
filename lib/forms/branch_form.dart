@@ -3,7 +3,7 @@ import 'package:far_project_frontend/api/api_service.dart';
 import 'package:far_project_frontend/api/data.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; 
-
+ 
 class AddBranchForm extends StatefulWidget {
   final Branch? branch; 
 
@@ -51,6 +51,7 @@ class _AddBranchFormState extends State<AddBranchForm> {
       _emailController.text = widget.branch!.email ?? '';
       _isActive = widget.branch!.isActive;
       selectedCountryId = widget.branch!.countryId;
+
       
     }
   }
@@ -103,6 +104,7 @@ class _AddBranchFormState extends State<AddBranchForm> {
 
   
   Future<void> _submit() async {
+    
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -153,7 +155,7 @@ class _AddBranchFormState extends State<AddBranchForm> {
         );
 
         
-        final result = await apiService.updateBranch(widget.branch!.branchId!, updatedBranch);
+        final result = await apiService.updateBranch( updatedBranch,widget.branch!.branchId!,);
         
         if (context.mounted) {
           Navigator.pop(context, result);
@@ -327,7 +329,8 @@ class _AddBranchFormState extends State<AddBranchForm> {
                     mainAxisAlignment: MainAxisAlignment.center, 
                     children: [
                       ElevatedButton(
-                        onPressed: _isLoading ? null : _submit,
+                        //onPressed: _isLoading ? null : _submit,
+                        onPressed: _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepPurple,
                           foregroundColor: Colors.white,

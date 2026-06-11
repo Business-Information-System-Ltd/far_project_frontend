@@ -83,12 +83,28 @@ class _DepartmentListPageState extends State<DepartmentListPage> {
       List<Department> departments = await _apiService.fetchDepartments();
       
       List<PlutoRow> fetchedRows = departments.map((dept) {
+
+       //parent deptname
+       String displayParentName = '-';
+        if (dept.parentDeptId != null) {
+          try {
+            
+            final parentObj = departments.firstWhere((d) => d.departmentId == dept.parentDeptId);
+            displayParentName = parentObj.deptName; 
+          } catch (e) {
+           
+            displayParentName = dept.parentDeptId.toString();
+          }
+        }
+
         return PlutoRow(
           cells: {
             'dept_code': PlutoCell(value: dept.deptCode ?? '-'),
             'dept_name': PlutoCell(value: dept.deptName),
-            'short_name': PlutoCell(value: dept.deptName), 
-            'parent_dept': PlutoCell(value: dept.parentDeptId != null ? dept.parentDeptId.toString() : '-'),
+            
+            'short_name': PlutoCell(value: dept.shortName ?? '-'),
+            // 'parent_dept': PlutoCell(value: dept.parentDeptName != null ? dept.parentDeptName.toString() : '-'),
+            'parent_dept': PlutoCell(value: displayParentName),
             'status': PlutoCell(value: dept.isActive),
             
             'action': PlutoCell(value: dept), 

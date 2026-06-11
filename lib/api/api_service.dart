@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:far_project_frontend/api/data.dart';
 
 class ApiService {
-  static String baseUrl = 'http://127.0.0.1:8000/api/far/v1/';
+  static String baseUrl = 'http://127.0.0.1:8000/api/v1/far/';
 
   // Endpoints
   static final String departmentEndpoint = 'departments/';
@@ -164,47 +164,104 @@ class ApiService {
     }
   }
 
-  Future<Branch> createBranch(Branch branch) async {
-    try {
-      final response = await http.post(
-        Uri.parse(baseUrl + branchEndpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(branch.toJson()),
-      );
-      if (response.statusCode == 201) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        print("Branch data : $data");
-        print("${response.statusCode} ${response.reasonPhrase}");
-        return Branch.fromJson(data);
-      } else {
-        throw Exception('Failed to create branch: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error creating branch: $e');
-      rethrow;
-    }
-  }
+  // Future<Branch> createBranch(Branch branch) async {
+  //   try {
+  //     final response = await http.post(
+  //       Uri.parse(baseUrl + branchEndpoint),
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: json.encode(branch.toJson()),
+  //     );
+  //     if (response.statusCode == 201) {
+  //       final Map<String, dynamic> data = json.decode(response.body);
+  //       print("Branch data : $data");
+  //       print("${response.statusCode} ${response.reasonPhrase} ${response.body}");
+  //       return Branch.fromJson(data);
+  //     } else {
+  //       throw Exception('Failed to create branch: ${response.statusCode}');
+  //     }
+  //   } catch (e) {
+  //     print('Error creating branch: $e');
+  //     rethrow;
+  //   }
+  // }
 
-  Future<Branch> updateBranch(int id, Branch branch) async {
-    try {
-      final response = await http.put(
-        Uri.parse('$baseUrl$branchEndpoint$id/'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(branch.toJson()),
-      );
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        print("Updated data : $data");
-        print("${response.statusCode} ${response.reasonPhrase}");
-        return Branch.fromJson(data);
-      } else {
-        throw Exception('Failed to update branch: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error updating branch: $e');
-      rethrow;
+
+
+  Future<Branch> createBranch(Branch branch) async {
+  try {
+    Map<String, dynamic> rawMap = branch.toJson();
+    rawMap.remove('branch_id');
+    rawMap['country_id'] = branch.countryId; 
+    rawMap.remove('country');
+    rawMap['is_active'] = branch.isActive;
+
+    final response = await http.post(
+      Uri.parse(baseUrl + branchEndpoint),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(rawMap),
+    );
+    
+    if (response.statusCode == 201) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      return Branch.fromJson(data);
+    } else {
+      print("Django Create Error Detail: ${response.body}");
+      throw Exception('Failed to create branch: ${response.statusCode} - ${response.body}');
     }
+  } catch (e) {
+    print('Error creating branch: $e');
+    rethrow;
   }
+}
+
+  // Future<Branch> updateBranch(int id, Branch branch) async {
+  //   try {
+  //     final response = await http.put(
+  //       Uri.parse('$baseUrl$branchEndpoint$id/'),
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: json.encode(branch.toJson()),
+  //     );
+  //     if (response.statusCode == 200) {
+  //       final Map<String, dynamic> data = json.decode(response.body);
+  //       print("Updated data : $data");
+  //       print("${response.statusCode} ${response.reasonPhrase}");
+  //       return Branch.fromJson(data);
+  //     } else {
+  //       throw Exception('Failed to update branch: ${response.statusCode}');
+  //     }
+  //   } catch (e) {
+  //     print('Error updating branch: $e');
+  //     rethrow;
+  //   }
+  // }
+
+  Future<Branch> updateBranch(Branch branch, int id) async {
+  try {
+    Map<String, dynamic> rawMap = branch.toJson();
+    rawMap.remove('branch_id');
+    rawMap['country_id'] = branch.countryId; 
+    rawMap.remove('country'); 
+    rawMap['is_active'] = branch.isActive;
+    print("Sending Corrected JSON to Django: ${json.encode(rawMap)}");
+    final response = await http.put(
+      Uri.parse('$baseUrl$branchEndpoint$id/'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(rawMap),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      print("Updated successfully : $data");
+      return Branch.fromJson(data);
+    } else {
+      print("Django Error Detail: ${response.body}");
+      throw Exception('Failed to update branch: ${response.statusCode} - ${response.body}');
+    }
+  } catch (e) {
+    print('Error updating branch: $e');
+    rethrow;
+  }
+}
 
   Future<Branch> patchBranch(int id, Map<String, dynamic> fieldsToUpdate) async {
     try {
@@ -346,5 +403,44 @@ class ApiService {
     }
   }
 
+//pagination for branch
+Future<PaginatedData<Branch>> getBranchesPaginated({
+    required int page,
+    required int limit,
+  }) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl$branchEndpoint?page=$page&limit=$limit'),
+    );
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      final List<dynamic> itemsJson = json['items'];
+      final List<Branch> branches = itemsJson
+          .map((j) => Branch.fromJson(j))
+          .toList();
+      return PaginatedData<Branch>(items: branches, totalCount: json['total']);
+    } else {
+      throw Exception('Failed to load branches');
+    }
+  }
+
+  //pagination for department
+  Future<PaginatedData<Department>> getDepartmentsPaginated({
+    required int page,
+    required int limit,
+  }) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl$departmentEndpoint?page=$page&limit=$limit'),
+    );
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      final List<dynamic> itemsJson = json['items'];
+      final List<Department> departments = itemsJson
+          .map((j) => Department.fromJson(j))
+          .toList();
+      return PaginatedData<Department>(items: departments, totalCount: json['total']);
+    } else {
+      throw Exception('Failed to load branches');
+    }
+  }
  
 }

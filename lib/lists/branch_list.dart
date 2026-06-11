@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 import 'package:far_project_frontend/api/api_service.dart';
 import 'package:far_project_frontend/api/data.dart'; 
+import 'package:far_project_frontend/details/branch_detail.dart'; 
 
 class BranchListPage extends StatefulWidget {
   const BranchListPage({Key? key}) : super(key: key);
@@ -172,9 +173,19 @@ class _BranchListPageState extends State<BranchListPage> {
               ),
               const Text('/', style: TextStyle(color: Colors.grey)),
               TextButton(
-                onPressed: () => null,
+                onPressed: () async { 
+   
+    await Navigator.of(context).push( 
+      MaterialPageRoute(
+        builder: (context) => BranchDetailScreen(branch: branch),
+      ),
+    );
+
+
+    _loadBranchData(); 
+  },
                 style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(45, 30)),
-                child: const Text('Detail', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                child: const Text('Detail', style: TextStyle(color:  Color(0xFF1B51C4), fontSize: 12,fontWeight: FontWeight.bold)),
               ),
             ], 
           );

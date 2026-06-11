@@ -36,6 +36,7 @@ class _AddDepartmentFormState extends State<AddDepartmentForm> {
   final _deptCodeController = TextEditingController();
   final _deptNameController = TextEditingController();
   final _deptShortNameController = TextEditingController();
+  
 
   @override
   void initState() {
@@ -46,7 +47,7 @@ class _AddDepartmentFormState extends State<AddDepartmentForm> {
     if (widget.department != null) {
       _deptCodeController.text = widget.department!.deptCode ?? '';
       _deptNameController.text = widget.department!.deptName;
-      _deptShortNameController.text = widget.department!.deptName; 
+      _deptShortNameController.text = widget.department!.shortName ?? ''; 
       
       _isActive = widget.department!.isActive;
       _allowAssetAssignment = widget.department!.allowAssignment;
@@ -116,6 +117,7 @@ class _AddDepartmentFormState extends State<AddDepartmentForm> {
           departmentId: null, 
           deptCode: _deptCodeController.text.trim().isEmpty ? null : _deptCodeController.text.trim(),
           deptName: _deptNameController.text.trim(),
+          shortName: _deptShortNameController.text.trim(),
           deptType: formatDeptType,
           parentDeptId: selectedParentDeptId,
           allowAssignment: _allowAssetAssignment,
@@ -139,6 +141,7 @@ class _AddDepartmentFormState extends State<AddDepartmentForm> {
           departmentId: widget.department!.departmentId, 
           deptCode: _deptCodeController.text.trim().isEmpty ? null : _deptCodeController.text.trim(),
           deptName: _deptNameController.text.trim(),
+          shortName: _deptShortNameController.text.trim(),
           deptType: formatDeptType,
           parentDeptId: selectedParentDeptId,
           allowAssignment: _allowAssetAssignment,
